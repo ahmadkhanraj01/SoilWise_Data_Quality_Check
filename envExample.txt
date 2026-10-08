@@ -1,0 +1,12 @@
+# Copy to .env and fill in. Keep .env out of git.
+
+DB_HOST=135.181.133.189
+DB_PORT=6532
+DB_NAME=msp-kh-dev
+DB_USER=
+DB_PASSWORD=
+DB_SCHEMA=validate
+
+# prefer | require | verify-full
+DB_SSLMODE=prefer
+DB_CONNECT_TIMEOUT=10

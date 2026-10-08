@@ -1,0 +1,29 @@
+# Secrets (envExample.txt is the committed template)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated reports (contain sample rows from the database)
+# schema_report.md
+# profile_report.md
+whatWeWanado.md
+
+# Generated results, logs and caches (keep only the folder README)
+out/*
+!out/README.md
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
