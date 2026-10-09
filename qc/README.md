@@ -48,7 +48,9 @@ Each check returns a `CheckResult`: a `score` in 0..1, `flags` (minor issues tha
 ```mermaid
 flowchart TD
     S[Dimension scores<br/>completeness, consistency,<br/>credibility, relevance] --> W[Weighted average<br/>weights from config.WEIGHTS,<br/>renormalised over available dimensions]
-    W --> A{overall}
+    ACC[Accuracy score<br/>spatial + link checks] --> PEN[Penalty only<br/>overall -= 0.10 x 1 - accuracy]
+    W --> PEN
+    PEN --> A{overall}
     A -->|under 0.40| R[reject]
     A -->|0.40 to 0.75| V[review]
     A -->|0.75 or more| M{any major flag?}
@@ -59,8 +61,8 @@ flowchart TD
 Accuracy is penalty-only (`ACCURACY_PENALTY_ONLY`): it subtracts `0.10 * (1 - score)` and never adds. A result with
 `applies=False` (e.g. relevance for thin-text records) keeps its flags but is left out of the average.
 
-Weights: completeness 0.25, consistency 0.20, credibility 0.20, relevance 0.25. Accuracy (0.10) joins once link
-results are added.
+Weights: completeness 0.25, consistency 0.20, credibility 0.20, relevance 0.25 (the four averaged dimensions), plus
+accuracy 0.10 as a penalty. Accuracy covers the spatial check and link liveness (`linkscore.py`, definitive ok/broken answers only).
 
 ## Source-aware scoring (`gaps.py`)
 A field missing in at least `SYSTEMIC_THRESHOLD` (80%) of a source's records is a harvester-level gap. For

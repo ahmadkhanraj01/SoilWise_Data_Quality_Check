@@ -9,6 +9,7 @@ import pickle
 import re
 from collections import Counter
 
+from qc import linkscore
 from qc.gaps import waived_by_source
 from qc.checks import accuracy, completeness, consistency, credibility, relevance
 from qc.fetch import fetch_records
@@ -49,6 +50,8 @@ def main() -> None:
             print(f"  waived for {src}: {', '.join(sorted(w))}")
     print(f"Scoring {len(records)} records")
 
+    links = linkscore.load()
+    print(f"Link evidence for {len(links)} records")
     rel = {} if args.no_relevance else relevance.score_all(records)
     rows, summary = [], Counter()
     for r in records:
@@ -59,7 +62,7 @@ def main() -> None:
         ]
         if r.id in rel:
             res.append(rel[r.id])
-        acc = accuracy.check(r)
+        acc = accuracy.check(r, links.get(r.id))
         if acc:
             res.append(acc)
         overall, decision = decide(res)

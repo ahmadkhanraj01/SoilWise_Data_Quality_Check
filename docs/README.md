@@ -1,20 +1,39 @@
 # docs
 
+Documentation for the SoilWise Data Quality Check. Start with [`../README.md`](../README.md)
+for the project overview, or pick a file below.
+
+## Quality dimensions (the five TOR checks)
+
+One file per dimension, written for technical and non-technical readers alike: what it is in
+plain words, how the code checks it (with the exact rules), a data flow diagram, what the data
+showed, what is still missing, and suggestions.
+
+| File | Dimension | Weight | In one sentence |
+|---|---|---|---|
+| [`COMPLETENESS.md`](COMPLETENESS.md) | Completeness | 0.25 | Is everything that should be in the record actually there? |
+| [`CONSISTENCY.md`](CONSISTENCY.md) | Consistency | 0.20 | Does the record contradict itself or the rest of the collection? |
+| [`CREDIBILITY.md`](CREDIBILITY.md) | Credibility | 0.20 | Can a user trust it: source, author, license, working link? |
+| [`RELEVANCE.md`](RELEVANCE.md) | Relevance | 0.25 | Is it actually about soil / land / agriculture (NLP)? |
+| [`ACCURACY.md`](ACCURACY.md) | Accuracy | 0.10, penalty-only | Are the values correct: valid map shapes, working links? |
+
+## Results and analysis
+
 | File | Contents |
 |---|---|
-| `NEXT_STEPS.md` | Deferred work: decoded link-check pass, accuracy scoring, open decisions, harvester tickets |
-| `TEAM_QUESTIONS.md` | Four decisions needed from the team (scope, labeled sample, trusted sources, where results go) |
-| `HARVESTER_TICKETS.md` | Draft tickets for the harvester owners with counts and evidence |
-| `FINDINGS.md` | Data profile of `validate.records`, scoring runs, source-aware scoring, relevance and link-check results |
+| [`FINDINGS.md`](FINDINGS.md) | Data profile of `validate.records`, scoring runs 1-4, source-aware scoring, relevance and link-check results |
 
-## Quality dimensions (one file each: what it is, how it is checked, data flow, what remains, suggestions)
+## Planning and decisions
 
-| File | Dimension | Weight |
-|---|---|---|
-| `COMPLETENESS.md` | Are the fields present and substantive? | 0.25 |
-| `CONSISTENCY.md` | Do the fields agree with each other and the corpus? | 0.20 |
-| `CREDIBILITY.md` | Is the record trustworthy: source, attribution, license, link? | 0.20 |
-| `RELEVANCE.md` | Is it about soil / land / agriculture (NLP: embeddings + keywords)? | 0.25 |
-| `ACCURACY.md` | Are the values correct (spatial WKT; link liveness planned)? | 0.10, penalty-only |
+| File | Contents |
+|---|---|
+| [`NEXT_STEPS.md`](NEXT_STEPS.md) | Deferred work: decoded link-check pass, accuracy scoring, open decisions, harvester tickets |
+| [`TEAM_QUESTIONS.md`](TEAM_QUESTIONS.md) | Four decisions needed from the team (scope, labeled sample, trusted sources, where results go) |
+| [`HARVESTER_TICKETS.md`](HARVESTER_TICKETS.md) | Draft tickets for the harvester owners with counts and evidence |
+
+Numbers in the dimension files come from `out/qc_results.csv` (run4, 25,129 records) and are listed in
+[`FINDINGS.md`](FINDINGS.md); where a file cites run3, the dimension did not change in run4.
 
 Project overview and diagrams: [`../README.md`](../README.md).
+Code-level docs: [`../qc/README.md`](../qc/README.md) and
+[`../qc/checks/README.md`](../qc/checks/README.md).

@@ -191,8 +191,14 @@ The 5 remaining rejects (openaire: "WP3 Report", "Social media accounts", "Artic
 "Promotional Package M06") are rejected on weak completeness and credibility alone, with no positive evidence of
 bad content. Option: reject only when off-topic or duplicate, otherwise review.
 
+**Run5 (link results in accuracy):** publish 20,380 / review 4,744 / reject 5. Accuracy now also uses link evidence
+(`qc/linkscore.py`): share of definitive answers (ok vs broken) per record; timeouts, restricted and invalid URLs are
+unknown. 24,159 records (96%) have an accuracy score (mean 0.991); 201 carry `broken_link`, and 46 moved from
+publish to review versus run4.
+
 ## Limits
-- Accuracy covers only spatial plausibility, for 19% of records. Link results exist but are not in the score.
+- Accuracy covers spatial plausibility (19% of records) plus link liveness where the check has a definitive answer.
+  The 33,844 percent-encoded URLs count as unknown except the 3,000-URL decoded sample.
 - Credibility uses offline signals only, and source trust is flat at 0.7, so it says little about source quality.
 - Relevance cut-offs and publish/review thresholds are untuned. There is no labeled data; the 3 approved and 1
   disapproved records are too few to calibrate.

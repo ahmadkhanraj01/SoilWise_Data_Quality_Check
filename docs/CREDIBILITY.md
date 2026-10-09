@@ -1,53 +1,71 @@
 # Credibility
 
-> TOR p. 25: the Knowledge Hub's quality assurance must validate **credibility** of knowledge
-> objects before they are made available. Scored by `qc.runner` with weight **0.20**.
+> One of the five quality dimensions required by the TOR (p. 25). Scored with weight **0.20**.
+>
+> **In one sentence:** *"Can a user trust this record — who made it, under what terms, and can
+> it be found again?"*
 
-## What it is
+## What it is (plain words)
 
-Credibility asks: *should the hub's users believe this record?* It is the dimension about
-**trust**: who stands behind the object, under what terms it may be used, whether it can be
-located again, and whether it comes from a source we consider reputable.
+Imagine two records, both complete and consistent. One says: *"Published by FAO, CC BY license,
+link works."* The other says: *"Unknown author, no license, no reliable link."* Both are
+*complete sentences* — but you would trust the first one much more.
 
-Three signals are evaluated:
+Credibility is that judgement: **should the hub's users believe this record?** It looks at four
+simple signals:
 
-| Signal | Question it answers |
+| Signal | The question it answers |
 |---|---|
-| source trust | do we trust this harvester/source at all? |
-| attribution (person or organization) | is there someone accountable for this object? |
-| license | are the reuse terms explicit? |
-| url / distribution | can anyone re-check or re-open the source? |
+| source trust | do we trust where this record was harvested from? |
+| attribution | is there a person or organization accountable for it? |
+| license | are the reuse terms written down? |
+| link | can anyone re-check or re-open the source? |
 
-Credibility is intentionally kept **offline** — no network calls in the scoring run — so the
-full 25k-record pass stays fast and reproducible. Link and DOI liveness exist as a separate job
-(`qc/linkcheck.py`) and are *not yet* part of the score.
+**Analogy:** like checking a recipe — known cook, clear ingredients list, published in a real
+magazine? Then you can trust it. Anonymous, no license, broken link? Be careful.
 
-## How we achieve it
+## How we check it
 
 Code: [`qc/checks/credibility.py`](../qc/checks/credibility.py) — `check(record, waived)`.
 
-Unlike completeness/consistency (penalty model), credibility is a **points model**: earned points
-over possible points, so the score is always 0..1 and waived components are removed from *both*
-numerator and denominator (a harvester-level gap neither helps nor hurts).
+### The idea in plain words
 
-### Points
+Unlike completeness (which *subtracts* points), credibility **earns** points — like collecting
+stamps on a card. There are stamps available for: coming from a trusted source, having an author,
+having a license, and having a link. The score is simply:
 
-| Component | Possible | Earned when | Config |
+> **score = stamps earned ÷ stamps available**
+
+And the clever part: if a field is missing from an entire source (a harvester bug), that stamp is
+**removed from both sides** of the division — neither earned nor available — so the record is not
+punished for a problem it cannot fix.
+
+The check is deliberately **offline** — no internet calls during scoring — so the full run of
+25,129 records stays fast and reproducible. Link checking exists as a separate job but is **not
+part of the score yet**.
+
+### The exact rules (technical)
+
+| Component | Possible points | Earned when | Flag if not |
 |---|---|---|---|
-| source trust | 0.5 | always: `0.5 × SOURCE_TRUST[source]` | `DEFAULT_SOURCE_TRUST = 0.7`, `SOURCE_TRUST = {}` |
-| attribution | 0.2 | at least one person **or** organization linked | flag `no_attribution` if not |
-| license | 0.15 | `license` non-empty | flag `no_license` if not |
+| source trust | 0.5 | always: `0.5 × SOURCE_TRUST[source]` | — |
+| attribution | 0.2 | at least one person **or** organization linked | `no_attribution` |
+| license | 0.15 | `license` non-empty | `no_license` |
 | url / distribution | 0.15 | `url` set **or** ≥1 distribution | — |
 
 `score = earned / possible`, capped at 1.0.
 
-### Source-aware waivers
+**Important current state:** `SOURCE_TRUST` in [`qc/config.py`](../qc/config.py) is an **empty
+dict** — every source gets the default 0.7. So the trust component is identical for every record
+and currently says nothing about which source is better (this is decision #3 in
+[`TEAM_QUESTIONS.md`](TEAM_QUESTIONS.md)).
 
-The same [`qc/gaps.py`](../qc/gaps.py) waiver set as completeness: if `license`, `url` or
-`person_org` is a systemic gap for the record's source (≥80% missing, source ≥50 records), that
-component is dropped from earned *and* possible points. Example: for an impact4soil record only
-source trust and the URL component remain, so the score reflects what that source can actually
-deliver.
+### Waivers (same smart rule as completeness)
+
+[`qc/gaps.py`](../qc/gaps.py) provides the waiver set: if `license`, `url` or `person_org` is
+missing in 80%+ of a source's records (source ≥ 50 records), that component disappears from
+*both* earned and possible points. Example: for an impact4soil record only source trust and the
+URL component remain — the score reflects what that source can actually deliver.
 
 ### Output
 
@@ -72,58 +90,64 @@ flowchart LR
     L -.-> C
 ```
 
-## Current results
+Reading the diagram in plain words: the record and its relationship counts come out of the
+database, the source-gap waivers arrive alongside them, the source-trust setting is applied from
+config, the points are tallied into a score, and that flows into the final decision and the CSV —
+while the link checker (dotted line) is *planned* but not yet connected.
 
-From `docs/FINDINGS.md` (run3, 25,129 records):
+## What we found
 
-- Mean credibility score: **0.768** — the second-weakest dimension, and mostly a mirror of
-  attribution/license presence rather than any real trust judgement.
-- Because `SOURCE_TRUST` is flat at 0.7 for all 14 sources, the trust component contributes
-  exactly the same to every record — **the score currently says almost nothing about which source
-  is more credible**.
-- Common flags: `no_license` 6,282 and `no_author_or_org` 2,458 (after waivers); in the profile,
-  license is missing in 77.5% overall and 82–100% in 12 of 14 sources.
-- Link evidence exists but is unused: of 22,872 testable URLs, 92.7% are ok; 78 broken, 78
-  restricted, 868 timeout; DOIs are healthy (14 failures).
+(from `docs/FINDINGS.md`, run3 and run4, 25,129 records; this dimension is identical in both runs)
 
-## What remains
+- Average credibility score: **0.768 out of 1** — but note it mostly mirrors attribution and
+  license presence, not any real trust judgement.
+- Because `SOURCE_TRUST` is flat at 0.7 for all 14 sources, the trust part contributes **exactly
+  the same to every record** — today the score says almost nothing about which source is more
+  credible.
+- Common flags: `no_license` 6,282 and `no_author_or_org` 2,458 (after waivers). Overall, the
+  license is missing in 77.5% of records and in 82–100% of 12 of 14 sources.
+- Link evidence exists but is unused: of 22,872 testable URLs, **92.7% work**; 78 broken, 78
+  restricted, 868 time out; DOIs are healthy (only 14 failures).
 
-- [ ] **Source trust is not configured.** `SOURCE_TRUST` in `config.py` is an empty dict —
-      decision #3 in `docs/TEAM_QUESTIONS.md` (who rates the 14 sources high/medium/low?).
-- [ ] **Link/DOI liveness is not in the score** (the main gap). The checker, the cleaned first
-      pass (`out/link_results_clean.csv`), the decoded sample and the 30 s retry all exist;
-      integrating them is `NEXT_STEPS.md` step 3.
-- [ ] **License is presence-only.** `Elsevier TDM`, `Wiley ... User Agreement`, `CC BY` and
-      `CC0` all earn the same 0.15; a publisher's text-and-data-mining terms is not the same kind
-      of permission as an open license.
-- [ ] **Attribution is presence-only.** One unidentified person earns full 0.2; ORCID
-      (`persons.orcid`) and ROR (`organizations.ror_identifier`) columns exist in the schema but
-      are never read.
-- [ ] **No publisher/venue signal.** Journal articles from predatory or irrelevant venues,
-      retracted papers, or non-authoritative hosts are not distinguished.
-- [ ] **No manual-review input.** The 3 approved / 1 disapproved records are too few to inform
-      anything.
+## What is not finished
+
+- **Source trust is not configured.** `SOURCE_TRUST` is empty — waiting on the team to rate the
+  14 sources high / medium / low.
+- **Link and DOI liveness are not in the score** (the biggest gap). Where it will count is still to be decided: the current plan puts it under accuracy ([`ACCURACY.md`](ACCURACY.md)), so credibility should not count it too. The checker and its results
+  files already exist; wiring them in is step 3 of [`NEXT_STEPS.md`](NEXT_STEPS.md).
+- **License is presence-only.** `CC BY` (open) and `Wiley Online Library User Agreement`
+  (restrictive) earn the same 0.15 points.
+- **Attribution is presence-only.** One unidentified name earns full points; the database already
+  has `ORCID` (persons) and `ROR` (organizations) identifier columns — never read.
+- **No publisher/venue signal.** Predatory journals, retracted papers or non-authoritative hosts
+  are not distinguished.
+- **No manual-review input** — only 3 approved / 1 disapproved records exist, far too few to
+  calibrate anything.
 
 ## Suggestions
 
-1. **Get the trust ratings and put them in `config.SOURCE_TRUST`** (decision #3). Even a crude
-   high=0.9 / medium=0.7 / low=0.4 split would make this dimension meaningful immediately; it is
-   the cheapest available improvement.
-2. **Integrate link results as planned** (`NEXT_STEPS.md` §3): per-record share of `ok` links,
-   with `timeout` and `restricted` treated as *unknown, not failed* until the dead-host question
-   is settled; keep the percent-encoded defect as its own flag. This turns "offline signals only"
-   into evidence.
-3. **Score license by class, not presence.** Map known values (CC0/CC BY/CC BY-SA/... = open;
-   publisher agreements = restricted/unknown) and award full points only for open or explicitly
-   public-domain terms; keep `no_license` for empty.
-4. **Use ORCID/ROR as confidence**: full points for attributed names with an ORCID/ROR identifier,
-   partial for a bare name — a real, offline credibility signal already sitting in the database.
-5. **Add DOI-level checks for articles**: Crossref lookup (retraction flag, type, container
-   title) for the ~10,965 journal articles would add a genuinely authoritative signal; it can run
-   in the same resumable style as `linkcheck.py`.
-6. **Reconsider the 0.5 weight on source trust.** Half the score currently comes from a value
-   that is identical for every record; until ratings exist, consider lowering it so attribution
-   and license do the work.
+1. **Get the trust ratings into `config.SOURCE_TRUST`.** Even a crude split (high 0.9 / medium 0.7
+   / low 0.4) would make this dimension meaningful immediately — it is the cheapest improvement
+   available.
+2. **Add link results to the score once, under accuracy** (`NEXT_STEPS.md` §3), not in both dimensions: per-record share of working links,
+   with timeouts and "restricted" responses counted as *unknown, not failed* until we confirm
+   which hosts are truly dead. This turns "offline guesses" into evidence.
+3. **Grade the license, don't just count it:** open licenses score full, publisher agreements
+   score as "unknown", empty stays missing.
+4. **Use ORCID/ROR:** full points for an attribution that carries an ORCID/ROR identifier,
+   partial for a bare name — a real trust signal already sitting in the database.
+5. **Add DOI checks for articles** (Crossref lookup: is the DOI real? retracted? does the title
+   match?) — this would cover the 10,965 journal articles and can reuse the resumable style of
+   `linkcheck.py`.
+6. **Reconsider the 0.5 weight on source trust** — half the score currently comes from a value
+   that is the same for everyone; until ratings exist, attribution and license should do more of
+   the work.
+
+## One-sentence summary
+
+> Credibility collects "trust stamps" — trusted source, author, license, working link — and
+> divides earned by available stamps, but until the team rates the sources and the link checker
+> joins the score, it mostly tells us *who filled in the form*, not *whether to believe it*.
 
 See also: [`COMPLETENESS.md`](COMPLETENESS.md), [`CONSISTENCY.md`](CONSISTENCY.md),
 [`ACCURACY.md`](ACCURACY.md), [`RELEVANCE.md`](RELEVANCE.md).

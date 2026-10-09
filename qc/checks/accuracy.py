@@ -1,8 +1,9 @@
 """Accuracy: plausibility checks on structured values (no network).
 
-Currently validates the `spatial` WKT polygon. Returns None when the record has nothing checkable,
-so the dimension is skipped for it and the remaining weights are renormalised.
-Link/DOI liveness (qc/linkcheck.py) is not part of this check yet.
+Validates the `spatial` WKT polygon and, when link evidence exists (qc/linkscore.py), link liveness:
+share of definitively answered links that work (timeouts/restricted are unknown and ignored). The score is
+the lower of the two. Returns None when the record has nothing checkable, so the dimension is skipped for it
+and the remaining weights are renormalised.
 """
 import re
 
@@ -16,7 +17,25 @@ def _points(wkt: str) -> list[tuple[float, float]]:
     return list(zip(nums[0::2], nums[1::2]))
 
 
-def check(r: Record) -> CheckResult | None:
+def check(r: Record, links: tuple[int, int] | None = None) -> CheckResult | None:
+    """links = (ok, broken) counts of definitive link results, or None when there is no link evidence."""
+    spatial = _spatial(r)
+    link = _link(links)
+    if spatial is None and link is None:
+        return None
+    parts = [x for x in (spatial, link) if x]
+    score = min(x.score for x in parts)
+    return CheckResult("accuracy", score, [f for x in parts for f in x.flags], [f for x in parts for f in x.major])
+
+
+def _link(links) -> CheckResult | None:
+    if not links or sum(links) == 0:
+        return None
+    ok, broken = links
+    return CheckResult("accuracy", ok / (ok + broken), ["broken_link"] if broken else [], [])
+
+
+def _spatial(r: Record) -> CheckResult | None:
     if not r.spatial or not r.spatial.strip():
         return None
     score, flags, major = 1.0, [], []

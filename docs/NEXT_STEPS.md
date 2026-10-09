@@ -53,7 +53,8 @@ Of 22,872 checkable URLs: 21,196 ok (92.7%), 868 timeout, 584 client error, 78 b
   (try `--timeout 30`) to separate slow servers from dead ones.
 - DOIs are healthy (14 failures).
 
-## 3. Add link results to the score (accuracy dimension)
+## 3. Add link results to the score (accuracy dimension) — DONE in run5
+Implemented in `qc/linkscore.py` and `qc/checks/accuracy.py`; the text below is the original plan. Still open: full decoded pass after the harvester fix, and making `broken_link` a major flag.
 Treat an unconfirmed timeout as unknown, not failed, until the dead-host question above is settled.
 Map per-record link results to a 0..1 accuracy score (share of a record's links that are ok; treat `restricted`
 and `timeout` as unknown, not failed). Add weight 0.10 to `config.WEIGHTS` and renormalise. Also include the

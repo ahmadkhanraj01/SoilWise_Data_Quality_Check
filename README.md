@@ -8,14 +8,15 @@ metadata records from 14 sources).
 
 ## Status
 
-| Dimension | State |
-|---|---|
-| Completeness | Done (rule-based, source-aware) |
-| Consistency | Done (dates, titles, duplicates, language) |
-| Credibility | Partial (offline signals only; source trust is flat) |
-| Relevance | Done (multilingual embeddings + keywords); cut-offs untuned |
-| Accuracy | Partial: spatial plausibility scored (19% of records); link/DOI checker built (`qc.linkcheck`) but not yet in the score |
+| Dimension | State | Doc |
+|---|---|---|
+| Completeness | Done (rule-based, source-aware) | [`docs/COMPLETENESS.md`](docs/COMPLETENESS.md) |
+| Consistency | Done (dates, titles, duplicates, language) | [`docs/CONSISTENCY.md`](docs/CONSISTENCY.md) |
+| Credibility | Partial (offline signals only; source trust is flat) | [`docs/CREDIBILITY.md`](docs/CREDIBILITY.md) |
+| Relevance | Done (multilingual embeddings + keywords); cut-offs untuned | [`docs/RELEVANCE.md`](docs/RELEVANCE.md) |
+| Accuracy | Done for what can be tested: spatial plausibility plus link/DOI liveness (timeouts = unknown); decoded-URL pass still partial | [`docs/ACCURACY.md`](docs/ACCURACY.md) |
 
+Latest run (run5): **publish 20,380 / review 4,744 / reject 5** of 25,129 records.
 The runner writes a CSV only. It never modifies the database.
 
 ## How it works
@@ -45,7 +46,7 @@ flowchart LR
 
     C --> SC[scoring.py<br/>weighted score + decision]
     R --> SC
-    L -. planned: accuracy .-> SC
+    L -->|accuracy via linkscore.py| SC
 
     SC --> CSV[/out/qc_results.csv/]
     G --> SG[/out/source_gaps.md/]
@@ -53,7 +54,7 @@ flowchart LR
     CSV --> REV[Reviewer<br/>works the 'review' list]
 ```
 
-Solid arrows exist today. The dotted arrow (link results feeding the score) is the next step.
+Link results feed the accuracy score through `qc/linkscore.py` (read from the CSVs, no network).
 Nothing is written back to the database.
 
 ### 2. What happens to one record
@@ -149,6 +150,22 @@ flowchart LR
     T -->|no| PEN[Penalised per record]
 ```
 
+## Documentation
+
+Index: [`docs/README.md`](docs/README.md). Written so technical and non-technical readers can
+both follow: what each dimension is in plain words, how the code checks it, a data flow diagram,
+what remains to be done, and suggestions.
+
+| Start here | What it gives you |
+|---|---|
+| [`docs/COMPLETENESS.md`](docs/COMPLETENESS.md) | Are the fields present? Penalty rules, source waivers |
+| [`docs/CONSISTENCY.md`](docs/CONSISTENCY.md) | Does the record contradict itself? Dates, titles, duplicates, language |
+| [`docs/CREDIBILITY.md`](docs/CREDIBILITY.md) | Can it be trusted? Source, attribution, license, link |
+| [`docs/RELEVANCE.md`](docs/RELEVANCE.md) | Is it on topic? The NLP check (embeddings + keywords) |
+| [`docs/ACCURACY.md`](docs/ACCURACY.md) | Are the values correct? Map shapes; link liveness planned |
+| [`docs/FINDINGS.md`](docs/FINDINGS.md) | What the checks found: profile, runs 1-4, link results |
+| [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) | What is left to do, and the open team decisions |
+
 ## Setup
 
 ```bash
@@ -186,7 +203,7 @@ qc/
   fetch.py         loads records plus relation counts
   gaps.py          source-level gap detection (waivers)
   topics.py        soil/land/agri topic seeds and keywords
-  checks/          completeness.py, consistency.py, credibility.py, relevance.py
+  checks/          completeness.py, consistency.py, credibility.py, relevance.py, accuracy.py
   scoring.py       weighted score -> publish / review / reject
   runner.py        runs everything, writes CSV
   linkcheck.py     URL and DOI liveness, resumable
@@ -195,8 +212,9 @@ qc/
   profile.py       data profiling
 ```
 
-See `qc/README.md` for the checks and scoring, and `docs/FINDINGS.md` for the data profile
-and results.
+See [`docs/README.md`](docs/README.md) for the documentation index (one page per quality
+dimension), [`qc/README.md`](qc/README.md) for the checks and scoring, and
+[`docs/FINDINGS.md`](docs/FINDINGS.md) for the data profile and results.
 
 ## Known data issues found so far
 

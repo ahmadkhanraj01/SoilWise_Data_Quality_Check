@@ -1,38 +1,44 @@
 # Consistency
 
-> TOR p. 25: the Knowledge Hub's quality assurance must validate **consistency** of knowledge
-> objects. Scored by `qc.runner` with weight **0.20**.
+> One of the five quality dimensions required by the TOR (p. 25). Scored with weight **0.20**.
+>
+> **In one sentence:** *"Does the record contradict itself — or the rest of the collection?"*
 
-## What it is
+## What it is (plain words)
 
-Consistency asks: *does the record contradict itself or the rest of the corpus?* Completeness
-looks at fields in isolation; consistency looks at how they relate:
+Completeness looks at each field on its own: *"is the date there?"* Consistency looks at how the
+fields **relate to each other**:
 
-- **Date logic** — a publication date in the future, content created after it was published, an
-  updated timestamp before creation, a temporal range whose end precedes its start are all
-  impossible or suspicious orderings.
-- **Title sanity** — under 10 characters, over 250, or ALL CAPS is almost always a harvesting or
-  cataloguing artefact.
-- **Duplicates** — two records with the same normalised title or the same URL are likely the same
-  object harvested twice; a hub that shows both wastes the reviewer's time.
-- **Language agreement** — the abstract's detected language differs from the declared `language`
-  field, which breaks search, filtering and any language-based presentation.
+- **Dates that make sense** — a publication date in the *future*? Content created *after* it was
+  published? An "updated" timestamp *before* creation? A time range whose end comes before its
+  start? All impossible or suspicious.
+- **Titles that look sane** — under 10 characters, over 250, or ALL CAPS is almost always a
+  harvesting accident, not a real title.
+- **Duplicates** — two records with the same title or the same link are probably the same object
+  harvested twice. Showing both wastes the reviewer's time and confuses users.
+- **Language that matches** — the record says the abstract is German, but the abstract is
+  actually English? Then search, filters and translation all break.
 
-## How we achieve it
+**Analogy:** it is the "does the story hold together?" check. Every individual answer on the
+form may be present (complete), but together they can still be nonsense.
+
+## How we check it
 
 Code: [`qc/checks/consistency.py`](../qc/checks/consistency.py) —
 `check(record, dup_title, dup_url)`.
 
-Same penalty model as completeness: start at 1.0, subtract per problem (floor 0). No condition is
-currently graded **major** — consistency issues alone never block publish, they only pull the
-overall score down.
+### The idea in plain words
 
-### Penalty table
+Same style as completeness: start at **100% (1.0)** and subtract a little for each contradiction.
+Nothing in this check is currently a "major" flag — consistency problems never block publishing
+on their own, they only pull the overall score down.
+
+### The exact rules (technical)
 
 | Condition | Flag | Penalty |
 |---|---|---|
 | `publication_date` in the future | `publication_in_future` | −0.25 |
-| `language` field ≠ `langdetect` of the abstract (abstract ≥ 100 chars) | `language_mismatch` | −0.20 |
+| `language` field ≠ `langdetect` result for the abstract (abstract ≥ 100 chars) | `language_mismatch` | −0.20 |
 | title under 10 chars (`MIN_TITLE_CHARS`) | `title_too_short` | −0.20 |
 | `temporal_end` before `temporal_start` | `temporal_end_before_start` | −0.15 |
 | duplicate normalised title (across the whole run) | `duplicate_title` | −0.15 |
@@ -42,18 +48,18 @@ overall score down.
 | title over 250 chars (`MAX_TITLE_CHARS`) | `title_too_long` | −0.10 |
 | title is all caps | `title_all_caps` | −0.05 |
 
-Details worth knowing:
+Details worth knowing (technical):
 
-- **Language detection** uses `langdetect` with `DetectorFactory.seed = 0` so results are
-  deterministic across runs. Only 15 language names are mapped (`LANG_CODES` in `config.py`);
-  records in unmapped languages are skipped rather than flagged. Detection is skipped for
-  abstracts under 100 chars, where it is unreliable.
-- **Duplicates are run-wide.** `runner.py` builds `Counter` maps of
-  `re.sub(r"\W+", " ", title.lower())` and of `url` over *all* records before scoring, then passes
-  `dup_title` / `dup_url` booleans into the check. They therefore only work when scoring the full
-  corpus, not with `--limit`.
-- **Nothing is waived.** Consistency problems are record-level; a systemic gap in a source does
-  not make a future publication date acceptable.
+- **Language detection** uses the `langdetect` library with a fixed random seed
+  (`DetectorFactory.seed = 0`), so the same record always gets the same answer. Only 15 language
+  names are mapped (`LANG_CODES` in `config.py`); unmapped languages are skipped, not flagged.
+  Detection is skipped for abstracts under 100 characters, where it is unreliable.
+- **Duplicates are found across the whole corpus.** `runner.py` first builds counting maps of
+  `title.lower()` (with punctuation removed) and of `url` over *all* records, then passes two
+  true/false flags into the check. They therefore only work when scoring everything — not with
+  `--limit 500`.
+- **Nothing is waived here.** A systemic gap in a source never makes a future publication date
+  acceptable — consistency problems are always record-level.
 
 ### Output
 
@@ -77,51 +83,63 @@ flowchart LR
     S --> CSV[("/out/qc_results.csv<br/>consistency column, flags")]
 ```
 
-## Current results
+Reading the diagram in plain words: the record comes out of the database; before scoring, one
+pass over the *whole* corpus finds duplicate titles and URLs; the check then tests date logic,
+title rules and the declared language against the detected language; the result flows into the
+final score and the CSV report.
 
-From `profile_report.md` and `docs/FINDINGS.md` (25,129 records):
+## What we found
 
-- Mean consistency score: **0.986** — the strongest dimension; the corpus is internally coherent.
-- Dates: 42 publications in the future, 78 created after published, 2 temporal end before start.
-- Duplicates: 205 groups share a normalised title, 122 groups share a URL, **0** duplicate
+(from `profile_report.md` and `docs/FINDINGS.md`, 25,129 records)
+
+- Average consistency score: **0.986 out of 1** — the strongest dimension; the corpus is
+  internally quite coherent.
+- Dates: **42** publications dated in the future, **78** created after published, **2** time
+  ranges ending before they start.
+- Duplicates: **205** groups share a normalised title, **122** groups share a URL, **0** duplicate
   identifiers.
-- Titles: 82 under 10 chars, 38 over 250 chars, 205 all caps.
-- Language: 88% English; **880 records** whose abstract language does not match the `language`
-  field.
+- Titles: **82** under 10 chars, **38** over 250 chars, **205** in ALL CAPS.
+- Language: 88% English; **880 records** where the detected abstract language does not match the
+  declared `language` field.
 
-## What remains
+## What is not finished
 
-- [ ] **Exact-match duplicates only.** `norm_title` collapses case and punctuation, but
-      "Soil atlas of Europe" vs. "The soil atlas of Europe" or a translated/updated title of the
-      same item are not caught. 205 title groups are the *lower* bound of true duplication.
-- [ ] **Near-duplicate URLs** (http vs https, trailing slash, query params, encoded vs plain —
-      note the percent-encoded `access_url` defect) are treated as different URLs.
-- [ ] **Language coverage is partial.** 15 mapped names; records whose `language` is an ISO code
-      or an unmapped name get no check at all, and 880 known mismatches still need a decision
-      (wrong field vs. wrong abstract).
-- [ ] **No major flag exists for this dimension.** A duplicate or a future publication date never
-      blocks publish on its own — only via the score.
-- [ ] **Cross-field consistency is not checked**, e.g. `resource_type` vs. title/abstract, dates
-      vs. the project period, `raw_metadata` JSON vs. the promoted columns.
-- [ ] `--limit` runs silently skip duplicate detection (by design), which can mislead when
-      comparing runs.
+- **Exact matches only.** "Soil atlas of Europe" vs. "The soil atlas of Europe" (or a translated
+  title of the same item) are not seen as duplicates — the 205 title groups are the *lower* bound
+  of true duplication.
+- **URLs are compared literally.** `http` vs `https`, a trailing slash, extra query parameters or
+  the percent-encoded defect make the same link look like two different links.
+- **Language coverage is partial.** Records whose language is stored as a code or an unmapped
+  name get no check at all — and the 880 known mismatches still need a human decision (wrong
+  language field, or wrong abstract?).
+- **No "major" flag exists here.** A duplicate or a future date never blocks publishing on its
+  own — it can only lower the score.
+- **Cross-field checks are missing**: does `resource_type` fit the title? Do the dates fit the
+  project period? Does `raw_metadata` (the original JSON) agree with the promoted columns?
+- With `--limit`, duplicate detection is silently skipped (by design), which can mislead when
+  comparing runs.
 
 ## Suggestions
 
-1. **Fuzzy duplicate detection.** Block on normalised title tokens (or a trigram/MinHash
-   signature), then compare within blocks. Report duplicate *clusters* with a suggested primary
-   record instead of pairwise flags — that is what the reviewer actually needs.
-2. **Normalise URLs before counting** (`urllib.parse`, lowercase host, strip trailing slash, drop
-   tracking params) and compare `records.url` against `distributions.access_url` too. This also
-   makes the percent-encoded defect visible as an inconsistency, not only as a link failure.
-3. **Promote one or two conditions to major**, e.g. `duplicate_url` between two records with
-   different titles, or `publication_in_future` beyond a small grace window — the current
-   "nothing is major" rule means consistency can never by itself stop a bad record.
-4. **Widen `LANG_CODES`** to every distinct `language` value in the corpus (a one-line report
-   from `qc.profile`), and consider flagging *unmapped* languages rather than skipping them.
-5. **Add a `raw_metadata` cross-check**: if the JSON blob disagrees with the promoted column
-   (title, license, date), the harvester mapping is wrong — a cheap, high-value consistency test
-   that catches bugs before they become data-quality trends.
+1. **Find near-duplicates too.** Group records by similar titles (e.g. compare only records that
+   share a few words), then report *clusters* with a suggested "primary" record — that is what a
+   reviewer actually needs.
+2. **Normalise URLs before comparing** (lowercase host, strip `http/https`, trailing slash and
+   tracking parameters). This also makes the percent-encoded defect visible here, not only in the
+   link check.
+3. **Promote one or two problems to "major"**, e.g. two different titles sharing one URL, or a
+   publication date far in the future — today consistency alone can never stop a bad record.
+4. **Widen `LANG_CODES`** to every language value that actually occurs (a one-line report from
+   `qc.profile`), and flag unmapped languages instead of skipping them.
+5. **Cross-check `raw_metadata` against the columns.** If the original JSON disagrees with the
+   promoted value, the harvester mapping is wrong — a cheap test that catches bugs before they
+   become trends.
+
+## One-sentence summary
+
+> Consistency is the "does the story hold together?" check: impossible dates, weird titles,
+> duplicate records and language mismatches each cost a few points — and duplicates are detected
+> across the entire corpus, not just record by record.
 
 See also: [`COMPLETENESS.md`](COMPLETENESS.md), [`CREDIBILITY.md`](CREDIBILITY.md),
 [`RELEVANCE.md`](RELEVANCE.md), [`ACCURACY.md`](ACCURACY.md).

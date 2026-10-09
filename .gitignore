@@ -25,6 +25,7 @@ out/*
 !out/run.log
 !out/run2.log
 !out/run3.log
+!out/run4.log
 !out/qc_results.csv
 
 # Editors / OS
