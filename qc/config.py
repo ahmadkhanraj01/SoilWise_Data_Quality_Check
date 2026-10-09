@@ -3,6 +3,10 @@
 WEIGHTS = {"completeness": 0.25, "consistency": 0.20, "credibility": 0.20, "relevance": 0.25, "accuracy": 0.10}
 # weights are renormalised over the dimensions available for a record (accuracy only applies to records with a spatial value)
 
+# Accuracy covers only ~19% of records (those with a spatial value). As a normal weighted dimension a
+# perfect score would lift borderline records over the publish line, so it only subtracts when it finds problems.
+ACCURACY_PENALTY_ONLY = True
+
 PUBLISH_MIN = 0.75
 REJECT_MAX = 0.40
 

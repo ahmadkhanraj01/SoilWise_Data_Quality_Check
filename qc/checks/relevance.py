@@ -77,7 +77,12 @@ def score_all(records: list[Record], batch_size: int = 64) -> dict[str, CheckRes
             major.append("possibly_off_topic")
         elif score < C.WEAK_TOPIC_MAX:
             flags.append("weak_topic_match")
-        res = CheckResult("relevance", score, flags, major)
+        thin = len((r.abstract or "").strip()) < C.SHORT_ABSTRACT_CHARS and not subjects.get(r.id)
+        if thin:
+            # Too little text for an embedding to mean anything: relevance is unknown, not off-topic.
+            res = CheckResult("relevance", score, ["relevance_unknown_thin_text"], [], applies=False)
+        else:
+            res = CheckResult("relevance", score, flags, major)
         res.sim = float(sim); res.hits = hits          # for reporting
         out[r.id] = res
     return out

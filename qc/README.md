@@ -34,6 +34,9 @@ flowchart LR
 | `scoring.py` | Weighted score to publish / review / reject |
 | `runner.py` | Runs everything, writes `out/qc_results.csv` |
 | `linkcheck.py` | URL and DOI liveness checker (separate, resumable job) |
+| `export_labeling.py` | Builds the blind labeling workbook for domain experts |
+| `linkcheck_decoded.py` | Second link-check pass: decodes percent-encoded URLs once, then checks them (`--sample N` spreads across hosts) |
+| `linkcheck_retry.py` | Retries timed-out URLs with a longer limit (max 25 per host) to separate slow from dead hosts |
 | `source_report.py` | Per-source gap report (`out/source_gaps.md`) |
 | `discover.py`, `profile.py` | Schema discovery and data profiling reports |
 
@@ -52,6 +55,9 @@ flowchart TD
     M -->|no| P[publish]
     M -->|yes| V
 ```
+
+Accuracy is penalty-only (`ACCURACY_PENALTY_ONLY`): it subtracts `0.10 * (1 - score)` and never adds. A result with
+`applies=False` (e.g. relevance for thin-text records) keeps its flags but is left out of the average.
 
 Weights: completeness 0.25, consistency 0.20, credibility 0.20, relevance 0.25. Accuracy (0.10) joins once link
 results are added.

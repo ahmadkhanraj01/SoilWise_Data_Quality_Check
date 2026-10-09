@@ -4,6 +4,8 @@ Usage: python -m qc.runner [--limit N] [--out out/qc_results.csv]
 """
 import argparse
 import csv
+import os
+import pickle
 import re
 from collections import Counter
 
@@ -17,14 +19,28 @@ def norm_title(t: str) -> str:
     return re.sub(r"\W+", " ", (t or "").lower()).strip()
 
 
+def load_records(args):
+    """--cached reuses out/records_cache.pkl (the DB fetch is slow); otherwise fetch and refresh the cache."""
+    path = "out/records_cache.pkl"
+    if args.cached and not args.limit and os.path.exists(path):
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    records = fetch_records(args.limit)
+    if not args.limit:
+        with open(path, "wb") as f:
+            pickle.dump(records, f)
+    return records
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--cached", action="store_true", help="reuse the cached DB fetch (out/records_cache.pkl)")
     ap.add_argument("--no-relevance", action="store_true", help="skip the (slow) embedding check")
     ap.add_argument("--out", default="out/qc_results.csv")
     args = ap.parse_args()
 
-    records = fetch_records(args.limit)
+    records = load_records(args)
     titles = Counter(norm_title(r.title) for r in records)
     urls = Counter(r.url for r in records if r.url)
     waived = waived_by_source(records)
@@ -52,7 +68,7 @@ def main() -> None:
                "resource_type": r.resource_type, "current_status": r.approval_status,
                "overall": round(overall, 3), "decision": decision}
         for x in res:
-            row[x.dimension] = round(x.score, 3)
+            row[x.dimension] = round(x.score, 3) if x.applies else ""
         if r.id in rel:
             row["rel_sim"] = round(rel[r.id].sim, 3); row["kw_hits"] = rel[r.id].hits
         row["waived"] = ";".join(sorted(waived[r.source]))
@@ -60,9 +76,14 @@ def main() -> None:
         row["major"] = ";".join(f for x in res for f in x.major)
         rows.append(row)
 
-    with open(args.out, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+    fields = ["id", "identifier", "title", "source", "resource_type", "current_status", "overall", "decision",
+              "completeness", "consistency", "credibility", "relevance", "accuracy",
+              "rel_sim", "kw_hits", "waived", "flags", "major"]
+    tmp = args.out + ".tmp"          # write to a temp file so a crash never destroys the previous results
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fields, restval="", extrasaction="raise")
         w.writeheader(); w.writerows(rows)
+    os.replace(tmp, args.out)
 
     print(dict(summary))
     flag_counts = Counter(fl for r in rows for fl in r["flags"].split(";") if fl)

@@ -1,0 +1,34 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  waived for bonares: license
+  waived for data.europa.eu: dates, license
+  waived for eea: license
+  waived for eufarmbook: dates, keywords, license
+  waived for fao: license, url
+  waived for impact4soil: dates, keywords, license, person_org
+  waived for inspire: license
+  waived for islandr: dates, license, person_org
+  waived for prepsoil: dates, license, person_org
+Scoring 25129 records
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 9282.22it/s]
+{'publish': 20597, 'review': 4515, 'reject': 17}
+  no_license: 6282
+  no_keywords: 5205
+  abstract_short: 4885
+  weak_topic_match: 3043
+  no_author_or_org: 2458
+  no_attribution: 2458
+  no_dates: 2056
+  possibly_off_topic: 1830
+  abstract_very_short: 986
+  no_url: 978
+  language_mismatch: 880
+  duplicate_title: 534
+  duplicate_url: 384
+  title_all_caps: 212
+  degenerate_extent: 152
+  title_too_short: 82
+  created_after_published: 78
+  publication_in_future: 42
+  title_too_long: 38
+  temporal_end_before_start: 2
+Wrote out/qc_results.csv

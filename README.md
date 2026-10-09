@@ -14,7 +14,7 @@ metadata records from 14 sources).
 | Consistency | Done (dates, titles, duplicates, language) |
 | Credibility | Partial (offline signals only; source trust is flat) |
 | Relevance | Done (multilingual embeddings + keywords); cut-offs untuned |
-| Accuracy | In progress: link/DOI checker built (`qc.linkcheck`), not yet in the score |
+| Accuracy | Partial: spatial plausibility scored (19% of records); link/DOI checker built (`qc.linkcheck`) but not yet in the score |
 
 The runner writes a CSV only. It never modifies the database.
 
@@ -169,6 +169,7 @@ python -m qc.source_report          # out/source_gaps.md: fields systematically 
 python -m qc.runner                 # out/qc_results.csv: scores and decisions (~16 min first run, cached after)
 python -m qc.runner --no-relevance  # skip the embedding step (~6 min)
 python -m qc.runner --limit 500     # quick test run
+python -m qc.export_labeling        # out/labeling_sample.xlsx: blind sample for expert labeling
 python -m qc.linkcheck              # out/link_results.csv: URL/DOI liveness (long, resumable)
 ```
 

@@ -21,6 +21,11 @@ whatWeWanado.md
 # Generated results, logs and caches (keep only the folder README)
 out/*
 !out/README.md
+!out/labeling_sample.xlsx
+!out/run.log
+!out/run2.log
+!out/run3.log
+!out/qc_results.csv
 
 # Editors / OS
 .vscode/

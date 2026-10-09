@@ -9,7 +9,8 @@ Source-aware: completeness and credibility accept a `waived` set (see `../gaps.p
 | `consistency.py` | Consistency | `check(record, dup_title, dup_url)` |
 | `credibility.py` | Credibility (offline signals) | `check(record, waived)` |
 | `relevance.py` | Relevance | `score_all(records)` (batch, embeddings) |
-| accuracy | not yet scored; see `../linkcheck.py` | |
+| `accuracy.py` | Accuracy (spatial WKT plausibility; returns None when no spatial value) | `check(record)` |
+| link liveness | not in the score yet; see `../linkcheck.py` | |
 
 ## completeness
 

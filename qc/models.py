@@ -31,3 +31,4 @@ class CheckResult:
     score: float                      # 0..1
     flags: list[str] = field(default_factory=list)   # minor issues
     major: list[str] = field(default_factory=list)   # force review/reject
+    applies: bool = True                              # False: flags are kept but the score is not used
